@@ -56,6 +56,7 @@ MBR_CONF="${INSTALL_DATA}/mbr.conf"
 PRESERVED_DATA_CONF="${INSTALL_DATA}/preserved-data.conf"
 EXISTING_CONF="${INSTALL_DATA}/existing-install.conf"
 UIVM_GCONF_VHD_KEY="${INSTALL_DATA}/uivm-gconf,aes-xts-plain,256.key"
+PCIBACK_CONF="${INSTALL_DATA}/pciback.conf"
 
 #-----------------------------------------------------------
 # Filesystem paths

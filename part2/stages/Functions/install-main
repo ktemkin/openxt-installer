@@ -17,6 +17,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+. install-pciback
+
 mk_xc_lvm()
 {
     local PARTITION_DEV="$1"
@@ -429,6 +431,15 @@ install_bootloader_from_dom0fs()
         echo "Error installing the bootloader">&2
         return 1
     }
+
+    #Update the bootloader so it handles any necessary PCI passthrough options.
+    while read line; do
+        set_device_owner_to_pciback_static $line || { 
+          echo "Error reserving devices for PCI passthrough"
+          return 1 
+        }
+    done < ${PCIBACK_CONF}
+
     return 0
 }
 

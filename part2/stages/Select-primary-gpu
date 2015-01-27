@@ -1,0 +1,148 @@
+#!/bin/bash
+
+. ${SCRIPT_DIR}/functions
+. ${SCRIPT_DIR}/Functions/install-pciback
+
+#
+# Prints a human-friendly name for the given DRM-enabled graphics card.
+#
+get_card_name() 
+{
+    local CARD="$1"
+    local BDF=$(get_card_bdf $CARD)
+
+    #Ask lspci for information about the given PCI device...
+    DATA=$(lspci -m -s $BDF)
+
+    #... and extract the Vendor and main device name.
+    echo $DATA | awk -F\" '{print $4, $6}'
+}
+
+#
+# Returns the BDF for the given DRM device.
+# TODO: Rewrite this so it doesn't depend on UDEV's uevent export?
+#
+get_card_bdf()
+{
+    local CARD="$1"
+    sed -n "/PCI_SLOT_NAME/ s/PCI_SLOT_NAME=//p" /sys/class/drm/$CARD/device/uevent
+}
+
+#
+# Returns the driver for the given DRM device.
+# TODO: Rewrite this so it doesn't depend on UDEV's uevent export?
+#
+get_card_driver()
+{
+    local CARD="$1"
+    sed -n "/DRIVER/ s/DRIVER=//p" /sys/class/drm/$CARD/device/uevent
+}
+
+#
+# Returns true iff the given DRM card is the display being used for installation.
+#
+is_current_display()
+{
+    local CARD="$1"
+    [ $(cat /sys/class/drm/$CARD/device/boot_vga) -eq 1 ]
+}
+
+#Get a list of all DRM-enabled graphics cards present on the machine.
+CARDS=$(ls /sys/class/drm/ | egrep "^card[0-9]+$" )
+
+#
+# Iterate over all graphics cards in current use, and build
+# a menu of displays the user can select between.
+#
+VALID_CARD_COUNT=0
+BDFS=""
+declare -A DRIVERS
+DEFAULT_BDF=""
+for CARD in $CARDS; do
+
+    BDF=$(get_card_bdf $CARD)
+    NAME=$(get_card_name $CARD)
+    DRIVER=$(get_card_driver $CARD)
+
+    #Compose a list of all known identifiers and drvers.
+    BDFS="${BDFS=}${BDFS:+ }${BDF}"
+    DRIVERS[$BDF]=$DRIVER
+
+    #Filter out known bad devices-- for example, any Radeons
+    #who don't play nicely with GBM. These will count as cards,
+    #but won't be usable as a primary device.
+    #if [ ${DRIVER} = "radeon" ]; then
+    #  continue;
+    #fi
+
+    #And increment the total "card count".
+    VALID_CARD_COUNT=$(( $VALID_CARD_COUNT + 1 ))
+
+    #And build the string that will be used to display the menu.
+    MENU_STRING="${MENU_STRING}\"${BDF}\" \"${NAME}\" "
+
+    #If this is the current display, use it as the default selection.
+    #TODO: Will this always be an i915, if they're present? If not, we
+    #should override this logic to always accept an i915. Buh, heuristics!
+    is_current_display $CARD && DEFAULT_BDF="${BDF}"
+
+done
+
+#If we don't have a default display, set it to the first available BDF.
+[ "x$DEFAULT_BDF" = "x" ] && DEFAULT_BDF=${BDFS[0]}
+
+#In some cases, there's only really one sane choice, and we should make it for the user:
+#   -If there's only one graphics card, it must be the primary display.
+#   -If we have an Intel integrated, it can /only/ be used for the multiplexed display,
+#    so it should be the primary. (We also get slightly better performance.)
+#   -If we're in an interactive install, use the sane default of the current display. 
+#    TODO: Get this from an answerfile, instead?
+if (! interactive) || [ $VALID_CARD_COUNT -eq 1 ] || [ ${DRIVERS[$DEFAULT_BDF]} = "i915" ]; then
+    PRIMARY_BDF="$DEFAULT_BDF"
+
+    #Corner case: if we got here via Previous, and this wasn't an interactive case,
+    #then the user never saw this screen-- and they want to be on the screen prior.
+    not_previous || exit ${Previous}
+
+#Otherwise, prompt the user to select a card.
+else
+
+    CARD_DESCRIPTION="Select the graphics card to be used as the primary display.\n\n\
+This card will be used to display the main ${PRODUCT_BRAND} multiplexed display. \
+Do not select a card that you would like to use as a pass-through card. If the display \
+being used for installation is compatible, it will be selected as the default option below."
+
+    #
+    #Prompt the user to select the card they want to use.
+    #
+    CAPTURE=$(mktemp -t)
+    echo ${MENU_STRING} | xargs dialog --ok-label Select --default-item "$DEFAULT_DISPLAY" --menu "$CARD_DESCRIPTION" 0 0 0 2>${CAPTURE}
+    RETURN=$?
+    PRIMARY_BDF=$(cat ${CAPTURE} 2>/dev/null)
+    rm -f ${CAPTURE}
+
+    #We currently run at the end of the script (post-install),
+    #as we use installer options to tweak the 
+    [ ${RETURN} != 1 ]   || exit ${Previous}
+    [ ${RETURN} != 123 ] || exit ${Previous}
+    [ ${RETURN} != 124 ] || exit ${Previous}
+    [ ${RETURN} != 255 ] || exit ${Previous}
+
+fi
+
+#
+#Build what we're really after: a list of devices that should not be used by dom0
+#in the new install. These will be added to pciback on the kernel command line.
+# 
+for BDF in $BDFS; do
+  #Skip the primary BDF; as this /will/ be passed to dom0.
+  [ $BDF = $PRIMARY_BDF ] && continue 
+
+  #But set every other device as a PCI-passthrough device.
+  touch ${PCIBACK_CONF}
+  echo "${DRIVERS[$BDF]}" "$BDF" >> ${PCIBACK_CONF}
+
+done
+
+exit ${Continue}
+
