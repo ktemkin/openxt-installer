@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 . ${SCRIPT_DIR}/functions
 . ${SCRIPT_DIR}/Functions/install-pciback
 
@@ -71,9 +72,9 @@ for CARD in $CARDS; do
     #Filter out known bad devices-- for example, any Radeons
     #who don't play nicely with GBM. These will count as cards,
     #but won't be usable as a primary device.
-    #if [ ${DRIVER} = "radeon" ]; then
-    #  continue;
-    #fi
+    if [ ${DRIVER} = "radeon" ]; then
+      continue;
+    fi
 
     #And increment the total "card count".
     VALID_CARD_COUNT=$(( $VALID_CARD_COUNT + 1 ))

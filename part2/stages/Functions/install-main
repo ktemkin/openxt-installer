@@ -18,6 +18,7 @@
 #
 
 . ${SCRIPT_DIR}/Functions/install-pciback
+. ${SCRIPT_DIR}/Functions/cpuinfo
 
 mk_xc_lvm()
 {
@@ -426,6 +427,8 @@ mount_config()
 
 install_bootloader_from_dom0fs()
 {
+    local GRUB_CONFIG="${DOM0_MOUNT}/boot/system/grub/grub.cfg"
+
     do_cmd chroot ${DOM0_MOUNT} \
            /usr/share/xenclient/install-bootloader "${LANGUAGE}" >&2 || {
         echo "Error installing the bootloader">&2
@@ -439,6 +442,19 @@ install_bootloader_from_dom0fs()
           return 1 
         }
     done < ${PCIBACK_CONF}
+
+    #Hack for NUMA systems: if we have a multi-socket system, bind DOM0 to its
+    #first socket (which typically drives the primary display's PCI bus). Xen will
+    #then adjust NUMA memory accordingly. 
+    #
+    #This /should/ be replaced with proper toolstack support for setting Node affinity,
+    #but the technology to make Xen guests -- including dom0-- aware of NUMA 
+    #(Virtual NUMA support) is still a WIP in upstream Xen, and there's no good way
+    #to detect which node the graphics device belongs to, currently.
+    #
+    if is_multi_socket; then
+      sed -i "/XEN_COMMON_CMD/ s/\"$/ dom0_max_vcpus=$(get_physical_threads_per_socket) dom0_vcpus_pin\"/" ${GRUB_CONFIG} > /dev/null
+    fi
 
     return 0
 }
