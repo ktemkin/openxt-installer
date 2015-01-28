@@ -71,8 +71,8 @@ set_device_owner_to_pciback_static()
   local GRUB_CONFIG="${DOM0_MOUNT}/boot/system/grub/grub.cfg"
 
   #If the pciback hide option isn't already present in the target's grub.cfg, add it.
-  grep "pciback.hide" ${GRUB_CONFIG} > /dev/null || sed -i "/LINUX_COMMON_CMD/ s/\"$/ pciback.hide=\"/" ${GRUB_CONFIG} > /dev/null
+  grep "xen-pciback.hide" ${GRUB_CONFIG} > /dev/null || sed -i "/LINUX_COMMON_CMD/ s/\"$/ xen-pciback.hide=\"/" ${GRUB_CONFIG} > /dev/null
 
   #... and add the relevant device to the linux command line.
-  sed -i "/LINUX_COMMON_CMD/ s/pciback.hide=/pciback.hide=(${DEVICE_BDF})/" ${GRUB_CONFIG} > /dev/null
+  sed -i "/LINUX_COMMON_CMD/ s/xen-pciback.hide=/xen-pciback.hide=(${DEVICE_BDF})/" ${GRUB_CONFIG} > /dev/null
 }
