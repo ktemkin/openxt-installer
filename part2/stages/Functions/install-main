@@ -6,16 +6,18 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
+
+. ${SCRIPT_DIR}/Functions/cpuinfo
 
 mk_xc_lvm()
 {
@@ -321,7 +323,7 @@ lv_in_use()
 {
     local DEV="$1"
 
-    local OPEN_COUNT="$(lvdisplay -c ${DEV} | cut -f6 -d:)" 
+    local OPEN_COUNT="$(lvdisplay -c ${DEV} | cut -f6 -d:)"
 
     [ "${OPEN_COUNT:-0}" -gt 0 ]
 }
@@ -424,11 +426,27 @@ mount_config()
 
 install_bootloader_from_dom0fs()
 {
+    local GRUB_CONFIG="${DOM0_MOUNT}/boot/system/grub/grub.cfg"
+
     do_cmd chroot ${DOM0_MOUNT} \
            /usr/share/xenclient/install-bootloader "${LANGUAGE}" >&2 || {
         echo "Error installing the bootloader">&2
         return 1
     }
+
+    # Quirk for NUMA systems: if we have a multi-socket system, bind DOM0 to its
+    # first socket (which typically drives the primary display's PCI bus). Xen will
+    # then adjust NUMA memory accordingly.
+    #
+    # This /should/ be replaced with proper toolstack support for setting Node affinity,
+    # but the technology to make Xen guests -- including dom0-- aware of NUMA
+    # (Virtual NUMA support) is still a WIP in upstream Xen, and there's no good way
+    # to detect which node the graphics device belongs to, currently.
+    #
+    if is_multi_socket; then
+      sed -i "/XEN_COMMON_CMD/ s/\"$/ dom0_max_vcpus=$(get_physical_threads_per_socket) dom0_vcpus_pin\"/" ${GRUB_CONFIG} > /dev/null
+    fi
+
     return 0
 }
 
