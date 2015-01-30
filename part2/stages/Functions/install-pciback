@@ -2,17 +2,17 @@
 #
 # Copyright (C) 2015 Assured Information Security, Inc.
 # Author: Kyle J. Temkin <temkink@ainfosec.com>
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -23,9 +23,9 @@
 # should be passed to the pciback driver by default.
 #
 # arguments: module_name, bdf_to_hide
-# 
-set_device_owner_to_pciback() {
-  
+#
+set_device_owner_to_pciback()
+{
     #Determine if the xen_pciback module is installed on the target.
     #We'll use this to decide whether we should use the icky static configuration
     #or the slightly prettier dynamic one.
@@ -40,7 +40,7 @@ set_device_owner_to_pciback() {
 }
 
 
-set_device_owner_to_pciback_module() 
+set_device_owner_to_pciback_module()
 {
   local DEVICE_MODULE="$1"
   local DEVICE_BDF="$2"
@@ -65,7 +65,7 @@ set_device_owner_to_pciback_module()
 
 }
 
-set_device_owner_to_pciback_static() 
+set_device_owner_to_pciback_static()
 {
   local DEVICE_BDF="$2"
   local GRUB_CONFIG="${DOM0_MOUNT}/boot/system/grub/grub.cfg"

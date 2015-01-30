@@ -437,18 +437,18 @@ install_bootloader_from_dom0fs()
 
     #Update the bootloader so it handles any necessary PCI passthrough options.
     while read line; do
-        set_device_owner_to_pciback_static $line || { 
+        set_device_owner_to_pciback_static $line || {
           echo "Error reserving devices for PCI passthrough"
-          return 1 
+          return 1
         }
     done < ${PCIBACK_CONF}
 
     #Hack for NUMA systems: if we have a multi-socket system, bind DOM0 to its
     #first socket (which typically drives the primary display's PCI bus). Xen will
-    #then adjust NUMA memory accordingly. 
+    #then adjust NUMA memory accordingly.
     #
     #This /should/ be replaced with proper toolstack support for setting Node affinity,
-    #but the technology to make Xen guests -- including dom0-- aware of NUMA 
+    #but the technology to make Xen guests -- including dom0-- aware of NUMA
     #(Virtual NUMA support) is still a WIP in upstream Xen, and there's no good way
     #to detect which node the graphics device belongs to, currently.
     #

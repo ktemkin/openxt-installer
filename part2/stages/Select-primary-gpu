@@ -7,7 +7,7 @@
 #
 # Prints a human-friendly name for the given DRM-enabled graphics card.
 #
-get_card_name() 
+get_card_name()
 {
     local CARD="$1"
     local BDF=$(get_card_bdf $CARD)
@@ -122,8 +122,7 @@ being used for installation is compatible, it will be selected as the default op
     PRIMARY_BDF=$(cat ${CAPTURE} 2>/dev/null)
     rm -f ${CAPTURE}
 
-    #We currently run at the end of the script (post-install),
-    #as we use installer options to tweak the 
+    #If the user cancels, move backwards through the installer.
     [ ${RETURN} != 1 ]   || exit ${Previous}
     [ ${RETURN} != 123 ] || exit ${Previous}
     [ ${RETURN} != 124 ] || exit ${Previous}
@@ -134,10 +133,10 @@ fi
 #
 #Build what we're really after: a list of devices that should not be used by dom0
 #in the new install. These will be added to pciback on the kernel command line.
-# 
+#
 for BDF in $BDFS; do
   #Skip the primary BDF; as this /will/ be passed to dom0.
-  [ $BDF = $PRIMARY_BDF ] && continue 
+  [ $BDF = $PRIMARY_BDF ] && continue
 
   #But set every other device as a PCI-passthrough device.
   touch ${PCIBACK_CONF}
