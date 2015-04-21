@@ -92,43 +92,48 @@ done
 #If we don't have a default display, set it to the first available BDF.
 [ "x$DEFAULT_BDF" = "x" ] && DEFAULT_BDF=${BDFS[0]}
 
-#In some cases, there's only really one sane choice, and we should make it for the user:
-#   -If there's only one graphics card, it must be the primary display.
-#   -If we have an Intel integrated, it can /only/ be used for the multiplexed display,
-#    so it should be the primary. (We also get slightly better performance.)
-#   -If we're in an interactive install, use the sane default of the current display. 
-#    TODO: Get this from an answerfile, instead?
-if (! interactive) || [ $VALID_CARD_COUNT -eq 1 ] || [ ${DRIVERS[$DEFAULT_BDF]} = "i915" ]; then
-    PRIMARY_BDF="$DEFAULT_BDF"
+#TODO: Possibly refind the logic for selection of the default card.
+#For now, we'll assume that pciback grabbing the Boot VGA card would be
+#bad, and thus always use the Boot VGA device.
+PRIMARY_BDF="$DEFAULT_BDF"
 
-    #Corner case: if we got here via Previous, and this wasn't an interactive case,
-    #then the user never saw this screen-- and they want to be on the screen prior.
-    not_previous || exit ${Previous}
-
-#Otherwise, prompt the user to select a card.
-else
-
-    CARD_DESCRIPTION="Select the graphics card to be used as the primary display.\n\n\
-This card will be used to display the main ${PRODUCT_BRAND} multiplexed display. \
-Do not select a card that you would like to use as a pass-through card. If the display \
-being used for installation is compatible, it will be selected as the default option below."
-
-    #
-    #Prompt the user to select the card they want to use.
-    #
-    CAPTURE=$(mktemp -t)
-    echo ${MENU_STRING} | xargs dialog --ok-label Select --default-item "$DEFAULT_DISPLAY" --menu "$CARD_DESCRIPTION" 0 0 0 2>${CAPTURE}
-    RETURN=$?
-    PRIMARY_BDF=$(cat ${CAPTURE} 2>/dev/null)
-    rm -f ${CAPTURE}
-
-    #If the user cancels, move backwards through the installer.
-    [ ${RETURN} != 1 ]   || exit ${Previous}
-    [ ${RETURN} != 123 ] || exit ${Previous}
-    [ ${RETURN} != 124 ] || exit ${Previous}
-    [ ${RETURN} != 255 ] || exit ${Previous}
-
-fi
+##In some cases, there's only really one sane choice, and we should make it for the user:
+##   -If there's only one graphics card, it must be the primary display.
+##   -If we have an Intel integrated, it can /only/ be used for the multiplexed display,
+##    so it should be the primary. (We also get slightly better performance.)
+##   -If we're in an interactive install, use the sane default of the current display. 
+##    TODO: Get this from an answerfile, instead?
+#if (! interactive) || [ $VALID_CARD_COUNT -eq 1 ] || [ ${DRIVERS[$DEFAULT_BDF]} = "i915" ]; then
+#    PRIMARY_BDF="$DEFAULT_BDF"
+#
+#    #Corner case: if we got here via Previous, and this wasn't an interactive case,
+#    #then the user never saw this screen-- and they want to be on the screen prior.
+#    not_previous || exit ${Previous}
+#
+##Otherwise, prompt the user to select a card.
+#else
+#
+#    CARD_DESCRIPTION="Select the graphics card to be used as the primary display.\n\n\
+#This card will be used to display the main ${PRODUCT_BRAND} multiplexed display. \
+#Do not select a card that you would like to use as a pass-through card. If the display \
+#being used for installation is compatible, it will be selected as the default option below."
+#
+#    #
+#    #Prompt the user to select the card they want to use.
+#    #
+#    CAPTURE=$(mktemp -t)
+#    echo ${MENU_STRING} | xargs dialog --ok-label Select --default-item "$DEFAULT_DISPLAY" --menu "$CARD_DESCRIPTION" 0 0 0 2>${CAPTURE}
+#    RETURN=$?
+#    PRIMARY_BDF=$(cat ${CAPTURE} 2>/dev/null)
+#    rm -f ${CAPTURE}
+#
+#    #If the user cancels, move backwards through the installer.
+#    [ ${RETURN} != 1 ]   || exit ${Previous}
+#    [ ${RETURN} != 123 ] || exit ${Previous}
+#    [ ${RETURN} != 124 ] || exit ${Previous}
+#    [ ${RETURN} != 255 ] || exit ${Previous}
+#
+#fi
 
 #
 #Build what we're really after: a list of devices that should not be used by dom0
